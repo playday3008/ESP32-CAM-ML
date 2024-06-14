@@ -6,6 +6,8 @@
         "christian-kohler.npm-intellisense",
         "ms-vscode.live-server",
 
+        "golang.go",
+
         "davidanson.vscode-markdownlint"
     ],
 }

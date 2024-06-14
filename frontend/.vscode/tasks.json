@@ -13,6 +13,50 @@
 				"kind": "none",
 				"isDefault": true
 			}
+		},
+		{
+			"label": "Get Compressed index.html",
+			"type": "shell",
+			"command": "go",
+			"args": [
+				"run",
+				"make_bundle.go",
+				"-i",
+				"../index.html",
+				"-o",
+				// PlatformIO's data folder
+				"../../backend/data/index.html.gz",
+				"-c"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/make_bundle"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "Get Compressed api.html",
+			"type": "shell",
+			"command": "go",
+			"args": [
+				"run",
+				"make_bundle.go",
+				"-i",
+				"../api.html",
+				"-o",
+				// PlatformIO's data folder
+				"../../backend/data/api.html.gz",
+				"-c"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/make_bundle"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
 		}
 	]
 }
