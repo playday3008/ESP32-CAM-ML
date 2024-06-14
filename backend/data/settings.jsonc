@@ -1,0 +1,55 @@
+{
+    // (MAJOR_VERSION << 24 | MINOR_VERSION << 16 | PATCH_VERSION << 8 | (sizeof(settings_t) & 0xFF))
+    "magic": 72620543991349848,
+    "wifi": {
+        // 0 = NULL, STA, AP, APSTA, NAN
+        // see: esp_wifi_types.h
+        "mode": 2,
+        "timeout": 25000,
+        "hostname": "ESP32-Sense",
+        // 0 = OPEN, WEP, WPA_PSK, WPA2_PSK, WPA_WPA2_PSK, WPA2_ENTERPRISE, WPA3_PSK, WPA2_WPA3_PSK, WAPI_PSK, OWE, WPA3_ENT_192
+        // see: esp_wifi_types.h
+        "security": 4,
+        "ap": {
+            "ssid": "ESP32-Sense-AP",
+            "pass": "TotallySecurePassword1234!",
+            "local_ip": "192.168.69.1",
+            "gateway": "192.168.69.1",
+            "subnet": "255.255.255.0"
+        },
+        "sta": {
+            "ssid": "",
+            "pass": "",
+            "dhcp": true,
+            "local_ip": "0.0.0.0",
+            "gateway": "0.0.0.0",
+            "subnet": "0.0.0.0",
+            "dns1": "94.140.14.140",
+            "dns2": "94.140.14.141"
+        }
+    },
+    "ota": {
+        "path": "/update",
+        "username": "",
+        "password": ""
+    },
+    "camera": {
+        "xclk_freq_hz": 20000000,
+        "ledc_timer": 0,
+        "ledc_channel": 0,
+        // 0 = RGB565, YUV422, YUV420, GRAYSCALE, JPEG, RGB888, RAW, RGB444, RGB555
+        // see: sensor.h
+        "pixel_format": 4,
+        // 0 = 96X96, QQVGA, QCIF, HQVGA, 240X240, QVGA, CIF, HVGA, VGA, SVGA, XGA, HD, SXGA, UXGA, FHD, P_HD, P_3MP, QXGA, QHD, WQXGA, P_FHD, QSXGA, INVALID
+        // see: sensor.h
+        "frame_size": 9,
+        "jpeg_quality": 12,
+        "fb_count": 1,
+        // 0 = IN_PSRAM, IN_DRAM
+        // see: esp_camera.h
+        "fb_location": 1,
+        // 0 = WHEN_EMPTY, LATEST
+        // see: esp_camera.h
+        "grab_mode": 0
+    }
+}
