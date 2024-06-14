@@ -230,9 +230,35 @@ static esp_err_t openapi_handler(httpd_req_t *req) {
     //{}
     JsonArray servers = doc["servers"].template to<JsonArray>();
     {
-        servers[0]["url"] = "http://" + WiFi.localIP().toString();
+        JsonObject ipv4_server = servers[0].template to<JsonObject>();
+        {
+            ipv4_server["url"] = "http://" + WiFi.localIP().toString() + ":{port}";
+            JsonObject vars    = ipv4_server["variables"].template to<JsonObject>();
+            {
+                JsonArray ports = vars["port"]["enum"].template to<JsonArray>();
+                {
+                    ports.add(80);
+                    ports.add(81);
+                    ports.add(3232);
+                }
+                vars["port"]["default"] = "80";
+            }
+        }
         if (WiFi.linkLocalIPv6()) {
-            servers[1]["url"] = "http://[" + WiFi.linkLocalIPv6().toString() + "]";
+            JsonObject ipv6_server = servers[1].template to<JsonObject>();
+            {
+                ipv6_server["url"] = "http://[" + WiFi.linkLocalIPv6().toString() + "]" + ":{port}";
+                JsonObject vars    = ipv6_server["variables"].template to<JsonObject>();
+                {
+                    JsonArray ports = vars["port"]["enum"].template to<JsonArray>();
+                    {
+                        ports.add(80);
+                        ports.add(81);
+                        ports.add(3232);
+                    }
+                    vars["port"]["default"] = "80";
+                }
+            }
         }
     }
     JsonArray tags = doc["tags"].template to<JsonArray>();
@@ -434,7 +460,10 @@ static esp_err_t openapi_handler(httpd_req_t *req) {
                     {
                         res_200["description"] = "Camera Stream";
                         JsonObject content     = res_200["content"].template to<JsonObject>();
-                        { content["multipart/x-mixed-replace"]["schema"]["type"] = "string"; }
+                        {
+                            content["multipart/x-mixed-replace"]["schema"]["type"] = "string";
+                            content["multipart/x-mixed-replace"]["schema"]["format"] = "binary";
+                        }
                     }
                 }
             }
