@@ -4,6 +4,8 @@ import p5 from 'p5';
 console.log(p5);
 import ml5 from 'ml5';
 console.log(ml5);
+import * as Tweakpane from 'tweakpane';
+console.log(Tweakpane);
 
 /**
  * @type {ml5.ObjectDetectorModel}
@@ -78,15 +80,34 @@ const sketch = p => {
   };
 };
 
+/**
+ * @returns {Tweakpane.Pane}
+ */
+const ui = () => {
+  const pane = new Tweakpane.Pane({
+    title: "ESP32-CAM-ML",
+    expanded: true
+  });
+  return pane;
+}
+
 globalThis.esp32 = new Object({
   /**
    * @type {p5?}
    */
   app: null,
+  /**
+   * @type {Tweakpane.Pane?}
+   */
+  ui: null,
   setup: () => {
-    return new p5(sketch);
+    return new Object({
+      app: new p5(sketch),
+      ui: ui()
+    })
   },
   "p5": p5,
   "ml5": ml5,
+  "Tweakpane": Tweakpane,
   "sketch": sketch
 });

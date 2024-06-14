@@ -17,7 +17,8 @@
     {
       "imports": {
         "p5": "https://cdn.jsdelivr.net/npm/p5@1/+esm",
-        "ml5": "https://cdn.jsdelivr.net/npm/ml5@0.12/+esm"
+        "ml5": "https://cdn.jsdelivr.net/npm/ml5@0.12/+esm",
+        "tweakpane": "https://cdn.jsdelivr.net/npm/tweakpane@4/+esm"
       }
     }
   </script>
@@ -27,7 +28,9 @@
     <!-- Load Scripts -->
     <script type="module" src="script.js"></script>
     <script type="module">
-        globalThis.esp32.app = globalThis.esp32.setup();
+        const ret = globalThis.esp32.setup();
+        globalThis.esp32.app = ret.app;
+        globalThis.esp32.ui = ret.ui;
     </script>
 </body>
 
