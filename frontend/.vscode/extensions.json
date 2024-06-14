@@ -1,0 +1,11 @@
+{
+    // See http://go.microsoft.com/fwlink/?LinkId=827846
+    // for the documentation about the extensions.json format
+    "recommendations": [
+        "ecmel.vscode-html-css",
+        "christian-kohler.npm-intellisense",
+        "ms-vscode.live-server",
+
+        "davidanson.vscode-markdownlint"
+    ],
+}

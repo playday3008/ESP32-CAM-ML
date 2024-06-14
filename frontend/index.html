@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Meta Tags -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Title -->
+    <title>ESP32-CAM-ML</title>
+
+    <!-- Styles -->
+    <link rel="stylesheet" type="text/css" href="style.css">
+
+    <!-- Load Dependencies -->
+    <script type="importmap">
+    {
+      "imports": {
+        "p5": "https://cdn.jsdelivr.net/npm/p5@1/+esm",
+        "ml5": "https://cdn.jsdelivr.net/npm/ml5@0.12/+esm"
+      }
+    }
+  </script>
+</head>
+
+<body>
+    <!-- Load Scripts -->
+    <script type="module" src="script.js"></script>
+    <script type="module">
+        globalThis.esp32.app = globalThis.esp32.setup();
+    </script>
+</body>
+
+</html>
