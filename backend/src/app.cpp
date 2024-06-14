@@ -230,9 +230,15 @@ static esp_err_t openapi_handler(httpd_req_t *req) {
     //{}
     JsonArray servers = doc["servers"].template to<JsonArray>();
     {
+        IPAddress ipv4 = WiFi.localIP();
+        IPAddress ipv6 = WiFi.linkLocalIPv6();
+        if (WiFi.getMode() == WIFI_AP) {
+            ipv4 = WiFi.softAPIP();
+            ipv6 = WiFi.softAPlinkLocalIPv6();
+        }
         JsonObject ipv4_server = servers[0].template to<JsonObject>();
         {
-            ipv4_server["url"] = "http://" + WiFi.localIP().toString() + ":{port}";
+            ipv4_server["url"] = "http://" + ipv4.toString() + ":{port}";
             JsonObject vars    = ipv4_server["variables"].template to<JsonObject>();
             {
                 JsonArray ports = vars["port"]["enum"].template to<JsonArray>();
@@ -244,10 +250,10 @@ static esp_err_t openapi_handler(httpd_req_t *req) {
                 vars["port"]["default"] = "80";
             }
         }
-        if (WiFi.linkLocalIPv6()) {
+        if (ipv6) {
             JsonObject ipv6_server = servers[1].template to<JsonObject>();
             {
-                ipv6_server["url"] = "http://[" + WiFi.linkLocalIPv6().toString() + "]" + ":{port}";
+                ipv6_server["url"] = "http://[" + ipv6.toString() + "]" + ":{port}";
                 JsonObject vars    = ipv6_server["variables"].template to<JsonObject>();
                 {
                     JsonArray ports = vars["port"]["enum"].template to<JsonArray>();
