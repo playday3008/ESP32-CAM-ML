@@ -467,7 +467,7 @@ static esp_err_t openapi_handler(httpd_req_t *req) {
                         res_200["description"] = "Camera Stream";
                         JsonObject content     = res_200["content"].template to<JsonObject>();
                         {
-                            content["multipart/x-mixed-replace"]["schema"]["type"] = "string";
+                            content["multipart/x-mixed-replace"]["schema"]["type"]   = "string";
                             content["multipart/x-mixed-replace"]["schema"]["format"] = "binary";
                         }
                     }
@@ -505,6 +505,10 @@ static esp_err_t openapi_handler(httpd_req_t *req) {
                     log_e("deserializeJson() failed: %s", error.c_str());
                 } else {
                     if (tmp.containsKey("properties")) {
+                        auto s        = esp_camera_sensor_get();
+                        auto si       = esp_camera_sensor_get_info(&s->id);
+                        auto max_size = get_max_framesize(si);
+                        tmp["properties"]["framesize"]["maximum"] = max_size;
                         Sensor["properties"] = tmp["properties"].template as<JsonObject>();
                     } else {
                         Sensor["properties"] = tmp.template as<JsonObject>();
@@ -575,9 +579,10 @@ static esp_err_t settings_handler(httpd_req_t *req) {
                         }
                         JsonArray frame_size = camera["frame_size"].template to<JsonArray>();
                         {
-                            for (size_t i = 0;
-                                 i < sizeof(framesize_names) / sizeof(framesize_names[0]);
-                                 i++) {
+                            auto s        = esp_camera_sensor_get();
+                            auto si       = esp_camera_sensor_get_info(&s->id);
+                            auto max_size = get_max_framesize(si);
+                            for (size_t i = 0; i < max_size; i++) {
                                 frame_size.add(framesize_names[i]);
                             }
                         }
@@ -660,7 +665,17 @@ static esp_err_t settings_handler(httpd_req_t *req) {
                                           g_settings.camera.frame_size,
                                           new_settings.camera.frame_size);
                                     if (s) {
-                                        s->set_framesize(s, new_settings.camera.frame_size);
+                                        auto fs = static_cast<decltype(s->status.framesize)>(
+                                            new_settings.camera.frame_size);
+                                        auto si       = esp_camera_sensor_get_info(&s->id);
+                                        auto max_size = get_max_framesize(si);
+                                        if (fs > max_size) {
+                                            log_w("Invalid framesize: %d", fs);
+                                            return httpd_resp_send_err(req,
+                                                                       HTTPD_400_BAD_REQUEST,
+                                                                       "Bad Request");
+                                        }
+                                        s->set_framesize(s, fs);
                                     }
                                 }
                                 if (g_settings.camera.jpeg_quality !=
@@ -804,9 +819,16 @@ static esp_err_t sensor_handler(httpd_req_t *req) {
                                 if (strcmp(key, "pixformat") == 0) {
                                     s->set_pixformat(s, static_cast<decltype(s->pixformat)>(value));
                                 } else if (strcmp(key, "framesize") == 0) {
-                                    s->set_framesize(
-                                        s,
-                                        static_cast<decltype(s->status.framesize)>(value));
+                                    auto fs = static_cast<decltype(s->status.framesize)>(value);
+                                    auto si = esp_camera_sensor_get_info(&s->id);
+                                    auto max_size = get_max_framesize(si);
+                                    if (fs > max_size) {
+                                        log_w("Invalid framesize: %d", fs);
+                                        return httpd_resp_send_err(req,
+                                                                   HTTPD_400_BAD_REQUEST,
+                                                                   "Bad Request");
+                                    }
+                                    s->set_framesize(s, fs);
                                 } else if (strcmp(key, "brightness") == 0) {
                                     s->set_brightness(
                                         s,

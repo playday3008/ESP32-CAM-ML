@@ -72,6 +72,29 @@ static_assert(sizeof(framesize_names) / sizeof(framesize_names[0]) == FRAMESIZE_
 #undef X
 #undef FRAMESIZES
 
+inline framesize_t get_max_framesize(camera_sensor_info_t* si) {
+    // clang-format off
+    switch (si->pid) {
+        default: // Will return the smallest size
+        case OV7725_PID:   return FRAMESIZE_VGA;
+        case OV7670_PID:   return FRAMESIZE_VGA;
+        case GC2145_PID:   return FRAMESIZE_VGA;
+        case GC032A_PID:   return FRAMESIZE_VGA;
+        case GC0308_PID:   return FRAMESIZE_VGA;
+        case BF3005_PID:   return FRAMESIZE_VGA;
+        case BF20A6_PID:   return FRAMESIZE_VGA;
+        case SC030IOT_PID: return FRAMESIZE_VGA;
+        case SC031GS_PID:  return FRAMESIZE_VGA;
+        case NT99141_PID:  return FRAMESIZE_HD;
+        case SC101IOT_PID: return FRAMESIZE_HD;
+        case OV9650_PID:   return FRAMESIZE_SXGA;
+        case OV2640_PID:   return FRAMESIZE_UXGA;
+        case OV3660_PID:   return FRAMESIZE_QXGA;
+        case OV5640_PID:   return FRAMESIZE_QSXGA;
+    }
+    // clang-format on
+}
+
 #pragma endregion
 
 // =============================
