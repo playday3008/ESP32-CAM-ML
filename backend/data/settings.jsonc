@@ -47,9 +47,9 @@
         "fb_count": 1,
         // 0 = IN_PSRAM, IN_DRAM
         // see: esp_camera.h
-        "fb_location": 1,
+        "fb_location": 0,
         // 0 = WHEN_EMPTY, LATEST
         // see: esp_camera.h
-        "grab_mode": 0
+        "grab_mode": 1
     }
 }
