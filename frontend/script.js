@@ -244,7 +244,7 @@ console.log;
  * @property {URL} endpoints.sensor
  * @property {URL} endpoints.openapi
  * 
- * @property {string} font
+ * @property {URL[]} fonts
  */
 
 /**
@@ -687,7 +687,12 @@ const consts = {
         sensor: new URL("/sensor", appBaseUrl),
         openapi: new URL("/api/openapi.json", appBaseUrl),
     },
-    font: "assets/FiraMonoNerdFontMono-Bold.otf",
+    fonts: [
+        new URL("/assets/Roboto-Bold.ttf", appBaseUrl),
+        new URL("/assets/Roboto-Regular.ttf", appBaseUrl),
+        new URL("https://raw.githubusercontent.com/openmaptiles/fonts/master/roboto/Roboto-Bold.ttf"),
+        new URL("https://raw.githubusercontent.com/openmaptiles/fonts/master/roboto/Roboto-Regular.ttf")
+    ],
 };
 
 // ###############################################
@@ -772,9 +777,14 @@ const sketch = (p) => {
                 p.windowResized();
             }, 250);
         });
-        font = p.loadFont(consts.font, () => {
-            if (font) p.textFont(font);
-        });
+        const loadFont = (/** @type {URL[]} */ urls, /** @type {number} */ idx = 0) => {
+            font = p.loadFont(urls[idx].toString(), () => {
+                if (font) p.textFont(font);
+            }, () => {
+                loadFont(urls, idx + 1);
+            });
+        };
+        loadFont(consts.fonts);
     };
 
     p.draw = () => {
