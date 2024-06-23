@@ -3,3 +3,6 @@ make_bundle/**
 !make_bundle/go.mod
 !make_bundle/go.sum
 !make_bundle/make_bundle.go
+
+# Ignore node_modules
+node_modules/
