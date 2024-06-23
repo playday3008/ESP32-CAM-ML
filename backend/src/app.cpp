@@ -521,6 +521,7 @@ static esp_err_t openapi_handler(httpd_req_t *req) {
     String json;
     serializeJson(doc, json);
     httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     return httpd_resp_send(req, json.c_str(), json.length());
 }
 
@@ -538,6 +539,7 @@ static esp_err_t index_handler(httpd_req_t *req) {
 }
 
 static esp_err_t settings_handler(httpd_req_t *req) {
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     switch (req->method) {
         case HTTP_GET: {
             JsonDocument doc;
@@ -749,6 +751,7 @@ static esp_err_t settings_handler(httpd_req_t *req) {
 }
 
 static esp_err_t sensor_handler(httpd_req_t *req) {
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     switch (req->method) {
         case HTTP_GET: {
             // Return all sensor settings
