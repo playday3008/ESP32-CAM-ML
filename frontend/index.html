@@ -21,16 +21,18 @@
         "tweakpane": "https://cdn.jsdelivr.net/npm/tweakpane@4/+esm"
       }
     }
-  </script>
+    </script>
 </head>
 
 <body>
+    <canvas id="p5-container"></canvas>
+    <div id="tweakpane-container"></div>
     <!-- Load Scripts -->
     <script type="module" src="script.js"></script>
     <script type="module">
-        const ret = globalThis.esp32.setup();
-        globalThis.esp32.app = ret.app;
-        globalThis.esp32.ui = ret.ui;
+        (async function () {
+            await globalThis.exports.esp32.setup();
+        })();
     </script>
 </body>
 

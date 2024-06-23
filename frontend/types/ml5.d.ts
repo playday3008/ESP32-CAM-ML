@@ -71,11 +71,11 @@ class ObjectDetector {
     constructor(
         modelNameOrUrl: ObjectDetectorModel,
         options?: YoloOptions | {},
-        callback?: (error: any, result: any) => void
+        callback?: (error: any, result: Array<ObjectDetectorPrediction>) => void
     );
     detect(
         input: p5.Element | p5.MediaElement | HTMLCanvasElement | HTMLImageElement | HTMLVideoElement | ImageData,
-        callback: (error: any | undefined, result: any) => void
+        callback: (error: any | undefined, result: Array<ObjectDetectorPrediction>) => void
     ): void;
 }
 
