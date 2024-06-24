@@ -6,6 +6,11 @@
   ```md
   ## Test case name
   
+  <!-- Choose one of the following: -->
+  <span style="color:red">**Failed**</span>
+  <span style="color:green">**Passed**</span>
+  <span style="color:orange">**Explained**</span>
+  
   ### Brief description
   
   Briefly describe what you've done.
