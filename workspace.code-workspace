@@ -1,6 +1,10 @@
 {
     "folders": [
         {
+            "name": "Documentation",
+            "path": "docs"
+        },
+        {
             "name": "Front-end",
             "path": "frontend"
         },
@@ -15,6 +19,7 @@
     ],
     "settings": {
         "files.exclude": {
+            "docs": true,
             "frontend": true,
             "backend": true,
         }
