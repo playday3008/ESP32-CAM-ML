@@ -13,6 +13,10 @@
             "path": "backend"
         },
         {
+            "name": "Tests",
+            "path": "tests"
+        },
+        {
             "name": "Root",
             "path": "."
         }
@@ -22,6 +26,7 @@
             "docs": true,
             "frontend": true,
             "backend": true,
+            "tests": true
         }
     }
 }
