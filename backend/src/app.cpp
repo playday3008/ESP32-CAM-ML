@@ -474,8 +474,8 @@ static esp_err_t openapi_handler(httpd_req_t *req) {
                 }
             }
         }
-        JsonObject ota = paths["/ota"].template to<JsonObject>();
-        {}
+        //JsonObject ota = paths["/ota"].template to<JsonObject>();
+        //{}
     }
     JsonObject components = doc["components"].template to<JsonObject>();
     {
