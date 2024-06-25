@@ -593,6 +593,10 @@ inline String generate_settings_json(sensor_t *s, bool types = false) {
             }
         }
     }
+    {
+        // Remove OTA settings
+        doc.remove("ota");
+    }
     doc.shrinkToFit();
 
     String json;
