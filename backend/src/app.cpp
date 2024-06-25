@@ -35,12 +35,6 @@ static constexpr const char *const Sensor_schema = []() {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
     "properties": {
-        "pixformat": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 8,
-            "format": "int32"
-        },
         "framesize": {
             "type": "integer",
             "minimum": 0,
@@ -73,6 +67,8 @@ static constexpr const char *const Sensor_schema = []() {
         },
         "denoise": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
             "format": "uint8"
         },
         "gainceiling": {
@@ -83,24 +79,32 @@ static constexpr const char *const Sensor_schema = []() {
         },
         "quality": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 1,
             "maximum": 63,
             "format": "uint8"
         },
         "colorbar": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
             "format": "uint8"
         },
         "whitebal": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
             "format": "uint8"
         },
         "gain_ctrl": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
             "format": "uint8"
         },
         "exposure_ctrl": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
             "format": "uint8"
         },
         "hmirror": {
@@ -117,10 +121,14 @@ static constexpr const char *const Sensor_schema = []() {
         },
         "aec2": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
             "format": "uint8"
         },
         "awb_gain": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
             "format": "uint8"
         },
         "agc_gain": {
@@ -131,6 +139,8 @@ static constexpr const char *const Sensor_schema = []() {
         },
         "aec_value": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 65535,
             "format": "uint16"
         },
         "special_effect": {
@@ -153,28 +163,37 @@ static constexpr const char *const Sensor_schema = []() {
         },
         "dcw": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
             "format": "uint8"
         },
         "bpc": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
             "format": "uint8"
         },
         "wpc": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
             "format": "uint8"
         },
         "raw_gma": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
             "format": "uint8"
         },
         "lenc": {
             "type": "integer",
+            "minimum": 0,
+            "maximum": 255,
             "format": "uint8"
         }
     },
     "additionalProperties": true,
     "required": [
-        "pixformat",
         "framesize",
         "brightness",
         "saturation",
