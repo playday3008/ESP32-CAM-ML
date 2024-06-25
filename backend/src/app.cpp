@@ -21,6 +21,8 @@
 #include "config.hpp"
 #include "error.hpp"
 
+using unique_buf_t = std::unique_ptr<char, decltype(&free)>;
+
 static constexpr const char *const Settings_schema = []() {
     return R"json(
 {}
@@ -203,20 +205,7 @@ static constexpr const char *const Sensor_schema = []() {
 )json";
 }();
 
-static esp_err_t api_handler(httpd_req_t *req) {
-    httpd_resp_set_type(req, "text/html");
-    httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
-    if (api_full_html_gz_size > 0) {
-        return httpd_resp_send(req,
-                               reinterpret_cast<const char *>(api_full_html_gz),
-                               api_full_html_gz_size);
-    }
-    return httpd_resp_send(req,
-                           reinterpret_cast<const char *>(api_stub_html_gz),
-                           api_stub_html_gz_size);
-}
-
-static esp_err_t openapi_handler(httpd_req_t *req) {
+inline String generate_openapi_json() {
     JsonDocument doc;
     doc["openapi"]  = "3.1.0";
     JsonObject info = doc["info"].template to<JsonObject>();
@@ -474,7 +463,7 @@ static esp_err_t openapi_handler(httpd_req_t *req) {
                 }
             }
         }
-        //JsonObject ota = paths["/ota"].template to<JsonObject>();
+        // JsonObject ota = paths["/ota"].template to<JsonObject>();
         //{}
     }
     JsonObject components = doc["components"].template to<JsonObject>();
@@ -517,11 +506,218 @@ static esp_err_t openapi_handler(httpd_req_t *req) {
             }
         }
     }
+    doc.shrinkToFit();
 
     String json;
     serializeJson(doc, json);
+
+    return json;
+}
+
+inline String generate_settings_json(bool types = false) {
+    JsonDocument doc;
+    doc = g_settings;
+    // Add enum types
+    if (types) {
+        JsonObject types = doc["$types"].template to<JsonObject>();
+        {
+            JsonObject wifi = types["wifi"].template to<JsonObject>();
+            {
+                JsonObject mode = wifi["mode"].template to<JsonObject>();
+                {
+                    JsonArray mode_enum = mode["$enum"].template to<JsonArray>();
+                    for (size_t i = 0; i < sizeof(wifi_mode_names) / sizeof(wifi_mode_names[0]);
+                         i++) {
+                        mode_enum.add(wifi_mode_names[i]);
+                    }
+                }
+                JsonObject security = wifi["security"].template to<JsonObject>();
+                {
+                    JsonArray security_enum = security["$enum"].template to<JsonArray>();
+                    for (size_t i = 0;
+                         i < sizeof(wifi_security_names) / sizeof(wifi_security_names[0]);
+                         i++) {
+                        security_enum.add(wifi_security_names[i]);
+                    }
+                }
+            }
+            JsonObject camera = types["camera"].template to<JsonObject>();
+            {
+                JsonArray pixel_format = camera["pixel_format"].template to<JsonArray>();
+                {
+                    for (size_t i = 0; i < sizeof(pixformat_names) / sizeof(pixformat_names[0]);
+                         i++) {
+                        pixel_format.add(pixformat_names[i]);
+                    }
+                }
+                JsonArray frame_size = camera["frame_size"].template to<JsonArray>();
+                {
+                    auto s        = esp_camera_sensor_get();
+                    auto si       = esp_camera_sensor_get_info(&s->id);
+                    auto max_size = get_max_framesize(si);
+                    for (size_t i = 0; i < max_size; i++) {
+                        frame_size.add(framesize_names[i]);
+                    }
+                }
+                JsonArray fb_location = camera["fb_location"].template to<JsonArray>();
+                {
+                    for (size_t i = 0; i < sizeof(fb_location_names) / sizeof(fb_location_names[0]);
+                         i++) {
+                        fb_location.add(fb_location_names[i]);
+                    }
+                }
+                JsonArray grab_mode = camera["grab_mode"].template to<JsonArray>();
+                {
+                    for (size_t i = 0; i < sizeof(grab_mode_names) / sizeof(grab_mode_names[0]);
+                         i++) {
+                        grab_mode.add(grab_mode_names[i]);
+                    }
+                }
+            }
+        }
+    }
+    doc.shrinkToFit();
+
+    String json;
+    serializeJson(doc, json);
+
+    return json;
+}
+
+inline String generate_sensor_json(sensor_t *s) {
+    JsonDocument doc;
+    doc["pixformat"]     = s->pixformat;
+    doc["framesize"]     = s->status.framesize;
+    doc["brightness"]    = s->status.brightness;
+    doc["contrast"]      = s->status.contrast;
+    doc["saturation"]    = s->status.saturation;
+    doc["sharpness"]     = s->status.sharpness;
+    doc["denoise"]       = s->status.denoise;
+    doc["gainceiling"]   = s->status.gainceiling;
+    doc["quality"]       = s->status.quality;
+    doc["colorbar"]      = s->status.colorbar;
+    doc["whitebal"]      = s->status.awb;
+    doc["gain_ctrl"]     = s->status.agc;
+    doc["exposure_ctrl"] = s->status.aec;
+    doc["hmirror"]       = s->status.hmirror;
+    doc["vflip"]         = s->status.vflip;
+
+    doc["aec2"]      = s->status.aec2;
+    doc["awb_gain"]  = s->status.awb_gain;
+    doc["agc_gain"]  = s->status.agc_gain;
+    doc["aec_value"] = s->status.aec_value;
+
+    doc["special_effect"] = s->status.special_effect;
+    doc["wb_mode"]        = s->status.wb_mode;
+    doc["ae_level"]       = s->status.ae_level;
+
+    doc["dcw"] = s->status.dcw;
+    doc["bpc"] = s->status.bpc;
+    doc["wpc"] = s->status.wpc;
+
+    doc["raw_gma"] = s->status.raw_gma;
+    doc["lenc"]    = s->status.lenc;
+
+    doc.shrinkToFit();
+
+    String json;
+    serializeJson(doc, json);
+
+    return json;
+}
+
+inline bool process_sensor_json(sensor_t *s, JsonObject obj) {
+    for (auto kv : obj) {
+        const char *key   = kv.key().c_str();
+        uint32_t    value = kv.value().as<uint32_t>();
+        if (strcmp(key, "pixformat") == 0) {
+            s->set_pixformat(s, static_cast<decltype(s->pixformat)>(value));
+        } else if (strcmp(key, "framesize") == 0) {
+            auto fs       = static_cast<decltype(s->status.framesize)>(value);
+            auto si       = esp_camera_sensor_get_info(&s->id);
+            auto max_size = get_max_framesize(si);
+            if (fs > max_size) {
+                log_w("Invalid framesize: %d", fs);
+                return false;
+            }
+            s->set_framesize(s, fs);
+        } else if (strcmp(key, "brightness") == 0) {
+            s->set_brightness(s, static_cast<decltype(s->status.brightness)>(value));
+        } else if (strcmp(key, "contrast") == 0) {
+            s->set_contrast(s, static_cast<decltype(s->status.contrast)>(value));
+        } else if (strcmp(key, "saturation") == 0) {
+            s->set_saturation(s, static_cast<decltype(s->status.saturation)>(value));
+        } else if (strcmp(key, "sharpness") == 0) {
+            s->set_sharpness(s, static_cast<decltype(s->status.sharpness)>(value));
+        } else if (strcmp(key, "denoise") == 0) {
+            s->set_denoise(s, static_cast<decltype(s->status.denoise)>(value));
+        } else if (strcmp(key, "gainceiling") == 0) {
+            s->set_gainceiling(s, static_cast<gainceiling_t>(value));
+        } else if (strcmp(key, "quality") == 0) {
+            s->set_quality(s, static_cast<decltype(s->status.quality)>(value));
+        } else if (strcmp(key, "colorbar") == 0) {
+            s->set_colorbar(s, static_cast<decltype(s->status.colorbar)>(value));
+        } else if (strcmp(key, "whitebal") == 0) {
+            s->set_whitebal(s, static_cast<decltype(s->status.awb)>(value));
+        } else if (strcmp(key, "gain_ctrl") == 0) {
+            s->set_gain_ctrl(s, static_cast<decltype(s->status.agc)>(value));
+        } else if (strcmp(key, "exposure_ctrl") == 0) {
+            s->set_exposure_ctrl(s, static_cast<decltype(s->status.aec)>(value));
+        } else if (strcmp(key, "hmirror") == 0) {
+            s->set_hmirror(s, static_cast<decltype(s->status.hmirror)>(value));
+        } else if (strcmp(key, "vflip") == 0) {
+            s->set_vflip(s, static_cast<decltype(s->status.vflip)>(value));
+        } else if (strcmp(key, "aec2") == 0) {
+            s->set_aec2(s, static_cast<decltype(s->status.aec2)>(value));
+        } else if (strcmp(key, "awb_gain") == 0) {
+            s->set_awb_gain(s, static_cast<decltype(s->status.awb_gain)>(value));
+        } else if (strcmp(key, "agc_gain") == 0) {
+            s->set_agc_gain(s, static_cast<decltype(s->status.agc_gain)>(value));
+        } else if (strcmp(key, "aec_value") == 0) {
+            s->set_aec_value(s, static_cast<decltype(s->status.aec_value)>(value));
+        } else if (strcmp(key, "special_effect") == 0) {
+            s->set_special_effect(s, static_cast<decltype(s->status.special_effect)>(value));
+        } else if (strcmp(key, "wb_mode") == 0) {
+            s->set_wb_mode(s, static_cast<decltype(s->status.wb_mode)>(value));
+        } else if (strcmp(key, "ae_level") == 0) {
+            s->set_ae_level(s, static_cast<decltype(s->status.ae_level)>(value));
+        } else if (strcmp(key, "dcw") == 0) {
+            s->set_dcw(s, static_cast<decltype(s->status.dcw)>(value));
+        } else if (strcmp(key, "bpc") == 0) {
+            s->set_bpc(s, static_cast<decltype(s->status.bpc)>(value));
+        } else if (strcmp(key, "wpc") == 0) {
+            s->set_wpc(s, static_cast<decltype(s->status.wpc)>(value));
+        } else if (strcmp(key, "raw_gma") == 0) {
+            s->set_raw_gma(s, static_cast<decltype(s->status.raw_gma)>(value));
+        } else if (strcmp(key, "lenc") == 0) {
+            s->set_lenc(s, static_cast<decltype(s->status.lenc)>(value));
+        } else {
+            log_w("Unknown key: %s", key);
+        }
+    }
+
+    return true;
+}
+
+static esp_err_t api_handler(httpd_req_t *req) {
+    httpd_resp_set_type(req, "text/html");
+    httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+    if (api_full_html_gz_size > 0) {
+        return httpd_resp_send(req,
+                               reinterpret_cast<const char *>(api_full_html_gz),
+                               api_full_html_gz_size);
+    }
+    return httpd_resp_send(req,
+                           reinterpret_cast<const char *>(api_stub_html_gz),
+                           api_stub_html_gz_size);
+}
+
+static esp_err_t openapi_json_handler(httpd_req_t *req) {
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+
+    const String json = generate_openapi_json();
+
     return httpd_resp_send(req, json.c_str(), json.length());
 }
 
@@ -542,81 +738,15 @@ static esp_err_t settings_handler(httpd_req_t *req) {
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     switch (req->method) {
         case HTTP_GET: {
-            JsonDocument doc;
-            doc = g_settings;
-            // Add enum types
-            {
-                JsonObject types = doc["$types"].template to<JsonObject>();
-                {
-                    JsonObject wifi = types["wifi"].template to<JsonObject>();
-                    {
-                        JsonObject mode = wifi["mode"].template to<JsonObject>();
-                        {
-                            JsonArray mode_enum = mode["$enum"].template to<JsonArray>();
-                            for (size_t i = 0;
-                                 i < sizeof(wifi_mode_names) / sizeof(wifi_mode_names[0]);
-                                 i++) {
-                                mode_enum.add(wifi_mode_names[i]);
-                            }
-                        }
-                        JsonObject security = wifi["security"].template to<JsonObject>();
-                        {
-                            JsonArray security_enum = security["$enum"].template to<JsonArray>();
-                            for (size_t i = 0;
-                                 i < sizeof(wifi_security_names) / sizeof(wifi_security_names[0]);
-                                 i++) {
-                                security_enum.add(wifi_security_names[i]);
-                            }
-                        }
-                    }
-                    JsonObject camera = types["camera"].template to<JsonObject>();
-                    {
-                        JsonArray pixel_format = camera["pixel_format"].template to<JsonArray>();
-                        {
-                            for (size_t i = 0;
-                                 i < sizeof(pixformat_names) / sizeof(pixformat_names[0]);
-                                 i++) {
-                                pixel_format.add(pixformat_names[i]);
-                            }
-                        }
-                        JsonArray frame_size = camera["frame_size"].template to<JsonArray>();
-                        {
-                            auto s        = esp_camera_sensor_get();
-                            auto si       = esp_camera_sensor_get_info(&s->id);
-                            auto max_size = get_max_framesize(si);
-                            for (size_t i = 0; i < max_size; i++) {
-                                frame_size.add(framesize_names[i]);
-                            }
-                        }
-                        JsonArray fb_location = camera["fb_location"].template to<JsonArray>();
-                        {
-                            for (size_t i = 0;
-                                 i < sizeof(fb_location_names) / sizeof(fb_location_names[0]);
-                                 i++) {
-                                fb_location.add(fb_location_names[i]);
-                            }
-                        }
-                        JsonArray grab_mode = camera["grab_mode"].template to<JsonArray>();
-                        {
-                            for (size_t i = 0;
-                                 i < sizeof(grab_mode_names) / sizeof(grab_mode_names[0]);
-                                 i++) {
-                                grab_mode.add(grab_mode_names[i]);
-                            }
-                        }
-                    }
-                }
-            }
-            doc.shrinkToFit();
-            String json;
-            serializeJson(doc, json);
             httpd_resp_set_type(req, "application/json");
+
+            const String json = generate_settings_json(true);
+
             return httpd_resp_send(req, json.c_str(), json.length());
         }
         case HTTP_POST: {
             size_t buf_len = req->content_len;
             if (buf_len > 0) {
-                using unique_buf_t = std::unique_ptr<char, decltype(&free)>;
                 unique_buf_t buf(reinterpret_cast<char *>(malloc(buf_len)), &free);
                 if (buf) {
                     int res = httpd_req_recv(req, buf.get(), buf_len);
@@ -698,9 +828,7 @@ static esp_err_t settings_handler(httpd_req_t *req) {
                                 if (!file) {
                                     log_e("Failed to open file for writing");
 
-                                    return httpd_resp_send_err(req,
-                                                               HTTPD_500_INTERNAL_SERVER_ERROR,
-                                                               "Internal Server Error");
+                                    return httpd_resp_send_500(req);
                                 }
 
                                 JsonDocument doc;
@@ -717,9 +845,7 @@ static esp_err_t settings_handler(httpd_req_t *req) {
                                     log_e("Failed to write default settings to file");
                                     log_i("Expected: %d, Actual: %d", output.length(), written);
 
-                                    return httpd_resp_send_err(req,
-                                                               HTTPD_500_INTERNAL_SERVER_ERROR,
-                                                               "Internal Server Error");
+                                    return httpd_resp_send_500(req);
                                 }
                             }
                         }
@@ -728,9 +854,7 @@ static esp_err_t settings_handler(httpd_req_t *req) {
                         if (!file) {
                             log_e("Failed to open settings file");
 
-                            return httpd_resp_send_err(req,
-                                                       HTTPD_500_INTERNAL_SERVER_ERROR,
-                                                       "Internal Server Error");
+                            return httpd_resp_send_500(req);
                         }
                         String json = file.readString();
                         file.close();
@@ -738,9 +862,7 @@ static esp_err_t settings_handler(httpd_req_t *req) {
                         httpd_resp_set_type(req, "application/json");
                         return httpd_resp_send(req, json.c_str(), json.length());
                     }
-                    return httpd_resp_send_err(req,
-                                               HTTPD_500_INTERNAL_SERVER_ERROR,
-                                               "Internal Server Error");
+                    return httpd_resp_send_500(req);
                 }
             }
             return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
@@ -754,51 +876,20 @@ static esp_err_t sensor_handler(httpd_req_t *req) {
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     switch (req->method) {
         case HTTP_GET: {
-            // Return all sensor settings
-            auto         s = esp_camera_sensor_get();
-            JsonDocument doc;
-            doc["pixformat"]     = s->pixformat;
-            doc["framesize"]     = s->status.framesize;
-            doc["brightness"]    = s->status.brightness;
-            doc["contrast"]      = s->status.contrast;
-            doc["saturation"]    = s->status.saturation;
-            doc["sharpness"]     = s->status.sharpness;
-            doc["denoise"]       = s->status.denoise;
-            doc["gainceiling"]   = s->status.gainceiling;
-            doc["quality"]       = s->status.quality;
-            doc["colorbar"]      = s->status.colorbar;
-            doc["whitebal"]      = s->status.awb;
-            doc["gain_ctrl"]     = s->status.agc;
-            doc["exposure_ctrl"] = s->status.aec;
-            doc["hmirror"]       = s->status.hmirror;
-            doc["vflip"]         = s->status.vflip;
-
-            doc["aec2"]      = s->status.aec2;
-            doc["awb_gain"]  = s->status.awb_gain;
-            doc["agc_gain"]  = s->status.agc_gain;
-            doc["aec_value"] = s->status.aec_value;
-
-            doc["special_effect"] = s->status.special_effect;
-            doc["wb_mode"]        = s->status.wb_mode;
-            doc["ae_level"]       = s->status.ae_level;
-
-            doc["dcw"] = s->status.dcw;
-            doc["bpc"] = s->status.bpc;
-            doc["wpc"] = s->status.wpc;
-
-            doc["raw_gma"] = s->status.raw_gma;
-            doc["lenc"]    = s->status.lenc;
-
-            doc.shrinkToFit();
-            String json;
-            serializeJson(doc, json);
             httpd_resp_set_type(req, "application/json");
-            return httpd_resp_send(req, json.c_str(), json.length());
+
+            auto s = esp_camera_sensor_get();
+            if (s) {
+                const String json = generate_sensor_json(s);
+
+                return httpd_resp_send(req, json.c_str(), json.length());
+            } else {
+                return httpd_resp_send_500(req);
+            }
         }
         case HTTP_POST: {
             size_t buf_len = req->content_len;
             if (buf_len > 0) {
-                using unique_buf_t = std::unique_ptr<char, decltype(&free)>;
                 unique_buf_t buf(reinterpret_cast<char *>(malloc(buf_len)), &free);
                 if (buf) {
                     int res = httpd_req_recv(req, buf.get(), buf_len);
@@ -816,152 +907,21 @@ static esp_err_t sensor_handler(httpd_req_t *req) {
                                                            "Bad Request");
                             }
 
-                            for (auto kv : doc.as<JsonObject>()) {
-                                const char *key   = kv.key().c_str();
-                                uint32_t    value = kv.value().as<uint32_t>();
-                                if (strcmp(key, "pixformat") == 0) {
-                                    s->set_pixformat(s, static_cast<decltype(s->pixformat)>(value));
-                                } else if (strcmp(key, "framesize") == 0) {
-                                    auto fs = static_cast<decltype(s->status.framesize)>(value);
-                                    auto si = esp_camera_sensor_get_info(&s->id);
-                                    auto max_size = get_max_framesize(si);
-                                    if (fs > max_size) {
-                                        log_w("Invalid framesize: %d", fs);
-                                        return httpd_resp_send_err(req,
-                                                                   HTTPD_400_BAD_REQUEST,
-                                                                   "Bad Request");
-                                    }
-                                    s->set_framesize(s, fs);
-                                } else if (strcmp(key, "brightness") == 0) {
-                                    s->set_brightness(
-                                        s,
-                                        static_cast<decltype(s->status.brightness)>(value));
-                                } else if (strcmp(key, "contrast") == 0) {
-                                    s->set_contrast(
-                                        s,
-                                        static_cast<decltype(s->status.contrast)>(value));
-                                } else if (strcmp(key, "saturation") == 0) {
-                                    s->set_saturation(
-                                        s,
-                                        static_cast<decltype(s->status.saturation)>(value));
-                                } else if (strcmp(key, "sharpness") == 0) {
-                                    s->set_sharpness(
-                                        s,
-                                        static_cast<decltype(s->status.sharpness)>(value));
-                                } else if (strcmp(key, "denoise") == 0) {
-                                    s->set_denoise(s,
-                                                   static_cast<decltype(s->status.denoise)>(value));
-                                } else if (strcmp(key, "gainceiling") == 0) {
-                                    s->set_gainceiling(s, static_cast<gainceiling_t>(value));
-                                } else if (strcmp(key, "quality") == 0) {
-                                    s->set_quality(s,
-                                                   static_cast<decltype(s->status.quality)>(value));
-                                } else if (strcmp(key, "colorbar") == 0) {
-                                    s->set_colorbar(
-                                        s,
-                                        static_cast<decltype(s->status.colorbar)>(value));
-                                } else if (strcmp(key, "whitebal") == 0) {
-                                    s->set_whitebal(s, static_cast<decltype(s->status.awb)>(value));
-                                } else if (strcmp(key, "gain_ctrl") == 0) {
-                                    s->set_gain_ctrl(s,
-                                                     static_cast<decltype(s->status.agc)>(value));
-                                } else if (strcmp(key, "exposure_ctrl") == 0) {
-                                    s->set_exposure_ctrl(
-                                        s,
-                                        static_cast<decltype(s->status.aec)>(value));
-                                } else if (strcmp(key, "hmirror") == 0) {
-                                    s->set_hmirror(s,
-                                                   static_cast<decltype(s->status.hmirror)>(value));
-                                } else if (strcmp(key, "vflip") == 0) {
-                                    s->set_vflip(s, static_cast<decltype(s->status.vflip)>(value));
-                                } else if (strcmp(key, "aec2") == 0) {
-                                    s->set_aec2(s, static_cast<decltype(s->status.aec2)>(value));
-                                } else if (strcmp(key, "awb_gain") == 0) {
-                                    s->set_awb_gain(
-                                        s,
-                                        static_cast<decltype(s->status.awb_gain)>(value));
-                                } else if (strcmp(key, "agc_gain") == 0) {
-                                    s->set_agc_gain(
-                                        s,
-                                        static_cast<decltype(s->status.agc_gain)>(value));
-                                } else if (strcmp(key, "aec_value") == 0) {
-                                    s->set_aec_value(
-                                        s,
-                                        static_cast<decltype(s->status.aec_value)>(value));
-                                } else if (strcmp(key, "special_effect") == 0) {
-                                    s->set_special_effect(
-                                        s,
-                                        static_cast<decltype(s->status.special_effect)>(value));
-                                } else if (strcmp(key, "wb_mode") == 0) {
-                                    s->set_wb_mode(s,
-                                                   static_cast<decltype(s->status.wb_mode)>(value));
-                                } else if (strcmp(key, "ae_level") == 0) {
-                                    s->set_ae_level(
-                                        s,
-                                        static_cast<decltype(s->status.ae_level)>(value));
-                                } else if (strcmp(key, "dcw") == 0) {
-                                    s->set_dcw(s, static_cast<decltype(s->status.dcw)>(value));
-                                } else if (strcmp(key, "bpc") == 0) {
-                                    s->set_bpc(s, static_cast<decltype(s->status.bpc)>(value));
-                                } else if (strcmp(key, "wpc") == 0) {
-                                    s->set_wpc(s, static_cast<decltype(s->status.wpc)>(value));
-                                } else if (strcmp(key, "raw_gma") == 0) {
-                                    s->set_raw_gma(s,
-                                                   static_cast<decltype(s->status.raw_gma)>(value));
-                                } else if (strcmp(key, "lenc") == 0) {
-                                    s->set_lenc(s, static_cast<decltype(s->status.lenc)>(value));
-                                } else {
-                                    log_w("Unknown key: %s", key);
-                                }
+                            if (!process_sensor_json(s, doc.as<JsonObject>())) {
+                                return httpd_resp_send_err(req,
+                                                           HTTPD_400_BAD_REQUEST,
+                                                           "Bad Request");
                             }
-
-                            JsonDocument res;
-                            res["pixformat"]     = s->pixformat;
-                            res["framesize"]     = s->status.framesize;
-                            res["brightness"]    = s->status.brightness;
-                            res["contrast"]      = s->status.contrast;
-                            res["saturation"]    = s->status.saturation;
-                            res["sharpness"]     = s->status.sharpness;
-                            res["denoise"]       = s->status.denoise;
-                            res["gainceiling"]   = s->status.gainceiling;
-                            res["quality"]       = s->status.quality;
-                            res["colorbar"]      = s->status.colorbar;
-                            res["whitebal"]      = s->status.awb;
-                            res["gain_ctrl"]     = s->status.agc;
-                            res["exposure_ctrl"] = s->status.aec;
-                            res["hmirror"]       = s->status.hmirror;
-                            res["vflip"]         = s->status.vflip;
-
-                            res["aec2"]      = s->status.aec2;
-                            res["awb_gain"]  = s->status.awb_gain;
-                            res["agc_gain"]  = s->status.agc_gain;
-                            res["aec_value"] = s->status.aec_value;
-
-                            res["special_effect"] = s->status.special_effect;
-                            res["wb_mode"]        = s->status.wb_mode;
-                            res["ae_level"]       = s->status.ae_level;
-
-                            res["dcw"] = s->status.dcw;
-                            res["bpc"] = s->status.bpc;
-                            res["wpc"] = s->status.wpc;
-
-                            res["raw_gma"] = s->status.raw_gma;
-                            res["lenc"]    = s->status.lenc;
-
-                            res.shrinkToFit();
-                            String json;
-                            serializeJson(res, json);
                             httpd_resp_set_type(req, "application/json");
+
+                            const String json = generate_sensor_json(s);
+
                             return httpd_resp_send(req, json.c_str(), json.length());
                         }
                     }
-                    return httpd_resp_send_err(req,
-                                               HTTPD_500_INTERNAL_SERVER_ERROR,
-                                               "Internal Server Error");
+                    return httpd_resp_send_500(req);
                 }
-                return httpd_resp_send_err(req,
-                                           HTTPD_500_INTERNAL_SERVER_ERROR,
-                                           "Internal Server Error");
+                return httpd_resp_send_500(req);
             }
             return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad Request");
         }
@@ -1003,7 +963,7 @@ void app::start() {
     const httpd_uri_t openapi_uri = {
       .uri      = "/api/openapi.json",
       .method   = HTTP_GET,
-      .handler  = openapi_handler,
+      .handler  = openapi_json_handler,
       .user_ctx = nullptr,
 #ifdef CONFIG_HTTPD_WS_SUPPORT
       .is_websocket             = true,
@@ -1088,3 +1048,15 @@ void app::start() {
         blink_error<ERR_APP_SERVER>(ERR_APP_START, true);
     }
 }
+
+#include "tests/app.hpp"
+
+namespace app::test {
+    const char *Settings_schema = ::Settings_schema;
+    const char *Sensor_schema   = ::Sensor_schema;
+
+    String generate_openapi_json() { return ::generate_openapi_json(); }
+    String generate_settings_json(bool types) { return ::generate_settings_json(types); }
+    String generate_sensor_json(sensor_t *s) { return ::generate_sensor_json(s); }
+    bool process_sensor_json(sensor_t *s, JsonObject obj) { return ::process_sensor_json(s, obj); }
+}  // namespace app::test

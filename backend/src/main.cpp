@@ -458,6 +458,7 @@ inline void setup_frontend() {
     }
 }
 
+#pragma weak setup // Make it weak to allow tests to override it
 void setup() {
     // Sleep for a while to allow the serial monitor to start
     sleep(1);
@@ -548,3 +549,14 @@ void loop() {
     // yield();
     delay(MAIN_LOOP_DELAY);
 }
+
+#include "tests/main.hpp"
+
+namespace main::test {
+    camera_config_t init_camera_config() { return ::init_camera_config(); }
+    void            prep_camera_module() { return ::prep_camera_module(); }
+    void            setup_camera_module(camera_config_t* camera_config) {
+        return ::setup_camera_module(camera_config);
+    }
+    sensor_t* config_sensor() { return ::config_sensor(); }
+}  // namespace main::test
