@@ -634,7 +634,7 @@ class UI {
             label: key.charAt(0).toUpperCase() + key.slice(1)
         }).on('change', () => {
             if (vars.settings)
-                sendSettings(consts.endpoints.settings, vars.settings?.sensor);
+                sendSettings(consts.endpoints.sensor, vars.settings?.sensor);
         });
     }
 
@@ -651,7 +651,7 @@ class UI {
             max: range.max
         }).on('change', () => {
             if (vars.settings)
-                sendSettings(consts.endpoints.settings, vars.settings?.sensor);
+                sendSettings(consts.endpoints.sensor, vars.settings?.sensor);
         });
     }
 }
