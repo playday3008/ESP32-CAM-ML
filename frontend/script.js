@@ -617,7 +617,9 @@ class UI {
         } else {
             folder.addBinding(setting, /** @type {never} */(subkey), {
                 label: subkey.charAt(0).toUpperCase() + subkey.slice(1),
-                step: 1
+                step: 1,
+                min: subkey === "jpeg_quality" ? 1 : undefined,
+                max: subkey === "jpeg_quality" ? 63 : undefined
             }).on('change', () => {
                 if (vars.settings)
                     sendSettings(consts.endpoints.settings, vars.settings?.device);
