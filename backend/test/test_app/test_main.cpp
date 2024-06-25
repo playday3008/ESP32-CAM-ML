@@ -30,7 +30,7 @@ void test_sensor_schema(void) {
 }
 
 void test_generate_openapi_json(void) {
-    String openapi_json_str = app::test::generate_openapi_json();
+    String openapi_json_str = app::test::generate_openapi_json(sensor);
     TEST_ASSERT_TRUE(openapi_json_str);
     {
         JsonDocument         doc;
@@ -64,7 +64,7 @@ void test_generate_openapi_json(void) {
 }
 
 void test_generate_settings_json(void) {
-    String settings_json = app::test::generate_settings_json(false);
+    String settings_json = app::test::generate_settings_json(sensor, false);
     TEST_ASSERT_TRUE(settings_json);
     {
         JsonDocument         doc;
@@ -81,7 +81,7 @@ void test_generate_settings_json(void) {
 }
 
 void test_generate_settings_json_with_types(void) {
-    String settings_json = app::test::generate_settings_json(true);
+    String settings_json = app::test::generate_settings_json(sensor, true);
     {
         JsonDocument         doc;
         DeserializationError error = deserializeJson(doc, settings_json);
@@ -118,8 +118,8 @@ void setup() {
 
     pinMode(LED_BUILTIN, OUTPUT);
 
-    UNITY_BEGIN();  // IMPORTANT LINE!
-
+    UNITY_BEGIN();
+    suiteSetUp();
     // Run test suite
 
     RUN_TEST(test_settings_schema);
@@ -132,4 +132,6 @@ void setup() {
 
     RUN_TEST(test_generate_sensor_json);
     RUN_TEST(test_process_sensor_json);
+
+    UNITY_END();
 }
