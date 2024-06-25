@@ -370,6 +370,25 @@ async function sendSettings(endpoint, config) {
     }
 }
 
+/**
+ * 
+ * @param {() => void} fn 
+ * @param {number} delay 
+ * @returns 
+ */
+const throttle = (fn, delay) => {
+    // Capture the current time  
+    let time = Date.now();
+    // Here's our logic  
+    return () => {
+        if ((time + delay - Date.now()) <= 0) {
+            // Run the function we've passed to our throttler,       
+            // and reset the `time` variable (so we can check again).    
+            fn(); time = Date.now();
+        }
+    };
+};
+
 // ###############################################
 // ################### CLASSES ###################
 // ###############################################
@@ -620,10 +639,10 @@ class UI {
                 step: 1,
                 min: subkey === "jpeg_quality" ? 1 : undefined,
                 max: subkey === "jpeg_quality" ? 63 : undefined
-            }).on('change', () => {
+            }).on('change', throttle(() => {
                 if (vars.settings)
                     sendSettings(consts.endpoints.settings, vars.settings?.device);
-            });
+            }, 250));
         }
     }
 
@@ -654,10 +673,10 @@ class UI {
             step: 1,
             min: range.min,
             max: range.max
-        }).on('change', () => {
+        }).on('change', throttle(() => {
             if (vars.settings)
                 sendSettings(consts.endpoints.sensor, vars.settings?.sensor);
-        });
+        }, 250));
     }
 }
 
