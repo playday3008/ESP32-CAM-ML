@@ -205,7 +205,7 @@ static constexpr const char *const Sensor_schema = []() {
 )json";
 }();
 
-inline String generate_openapi_json() {
+inline String generate_openapi_json(sensor_t *s) {
     JsonDocument doc;
     doc["openapi"]  = "3.1.0";
     JsonObject info = doc["info"].template to<JsonObject>();
@@ -494,7 +494,6 @@ inline String generate_openapi_json() {
                     log_e("deserializeJson() failed: %s", error.c_str());
                 } else {
                     if (tmp.containsKey("properties")) {
-                        auto s        = esp_camera_sensor_get();
                         auto si       = esp_camera_sensor_get_info(&s->id);
                         auto max_size = get_max_framesize(si);
                         tmp["properties"]["framesize"]["maximum"] = max_size;
@@ -514,7 +513,7 @@ inline String generate_openapi_json() {
     return json;
 }
 
-inline String generate_settings_json(bool types = false) {
+inline String generate_settings_json(sensor_t *s, bool types = false) {
     JsonDocument doc;
     doc = g_settings;
     // Add enum types
@@ -552,7 +551,6 @@ inline String generate_settings_json(bool types = false) {
                 }
                 JsonArray frame_size = camera["frame_size"].template to<JsonArray>();
                 {
-                    auto s        = esp_camera_sensor_get();
                     auto si       = esp_camera_sensor_get_info(&s->id);
                     auto max_size = get_max_framesize(si);
                     for (size_t i = 0; i < max_size; i++) {
@@ -716,7 +714,13 @@ static esp_err_t openapi_json_handler(httpd_req_t *req) {
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
 
-    const String json = generate_openapi_json();
+    auto s = esp_camera_sensor_get();
+    if (!s) {
+        log_e("Failed to get sensor");
+
+        return httpd_resp_send_500(req);
+    }
+    const String json = generate_openapi_json(s);
 
     return httpd_resp_send(req, json.c_str(), json.length());
 }
@@ -740,7 +744,13 @@ static esp_err_t settings_handler(httpd_req_t *req) {
         case HTTP_GET: {
             httpd_resp_set_type(req, "application/json");
 
-            const String json = generate_settings_json(true);
+            auto s = esp_camera_sensor_get();
+            if (!s) {
+                log_e("Failed to get sensor");
+
+                return httpd_resp_send_500(req);
+            }
+            const String json = generate_settings_json(s, true);
 
             return httpd_resp_send(req, json.c_str(), json.length());
         }
@@ -1055,8 +1065,10 @@ namespace app::test {
     const char *Settings_schema = ::Settings_schema;
     const char *Sensor_schema   = ::Sensor_schema;
 
-    String generate_openapi_json() { return ::generate_openapi_json(); }
-    String generate_settings_json(bool types) { return ::generate_settings_json(types); }
+    String generate_openapi_json(sensor_t *s) { return ::generate_openapi_json(s); }
+    String generate_settings_json(sensor_t *s, bool types) {
+        return ::generate_settings_json(s, types);
+    }
     String generate_sensor_json(sensor_t *s) { return ::generate_sensor_json(s); }
     bool process_sensor_json(sensor_t *s, JsonObject obj) { return ::process_sensor_json(s, obj); }
 }  // namespace app::test
