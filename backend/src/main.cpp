@@ -205,6 +205,10 @@ inline void setup_wifi() {
                              g_settings.wifi.sta.dns2)) {
                 log_e("Failed to set static IP address");
                 blink_error<ERR_WIFI>(ERR_WIFI_STA_STATIC_IP, true);
+                if (!SPIFFS.remove(SPIFFS_SETTINGS_PATH)) {
+                    blink_error<ERR_SETTINGS>(ERR_SETTINGS_REMOVE, true);
+                }
+                ESP.restart();
             }
         } else {
             log_i("Using DHCP");
@@ -320,6 +324,9 @@ inline void setup_camera_module(camera_config_t* camera_config) {
         log_e("Camera initialization failed with error 0x%X", err);
 
         blink_error<ERR_CAMERA>(ERR_CAMERA_INIT, false);
+        if (!SPIFFS.remove(SPIFFS_SETTINGS_PATH)) {
+            blink_error<ERR_SETTINGS>(ERR_SETTINGS_REMOVE, true);
+        }
         ESP.restart();
     }
 }
@@ -458,7 +465,7 @@ inline void setup_frontend() {
     }
 }
 
-#pragma weak setup // Make it weak to allow tests to override it
+#pragma weak setup  // Make it weak to allow tests to override it
 void setup() {
     // Sleep for a while to allow the serial monitor to start
     sleep(1);
