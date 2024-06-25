@@ -86,7 +86,7 @@ static constexpr const char *const Sensor_schema = []() {
         "colorbar": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 255,
+            "maximum": 1,
             "format": "uint8"
         },
         "whitebal": {
