@@ -543,6 +543,20 @@ void setup() {
         digitalWrite(LED_TO_BLINK, LED_TO_BLINK_LOW);
         delay(50);
     }
+
+    // Delete settings if BOOT button is pressed (Pull-up on GPIO0)
+    pinMode(GPIO_NUM_0, INPUT_PULLUP);
+    if (digitalRead(GPIO_NUM_0) == LOW) {
+        log_i("BOOT button pressed, deleting settings");
+        if (!SPIFFS.remove(SPIFFS_SETTINGS_PATH)) {
+            log_e("Failed to delete settings");
+            blink_error<ERR_SETTINGS>(ERR_SETTINGS_REMOVE, true);
+        } else {
+            log_i("Settings deleted");
+
+            ESP.restart();
+        }
+    }
 }
 
 void loop() {
