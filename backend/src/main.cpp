@@ -323,7 +323,7 @@ inline void setup_camera_module(camera_config_t* camera_config) {
     if (err != ESP_OK) {
         log_e("Camera initialization failed with error 0x%X", err);
 
-        blink_error<ERR_CAMERA>(ERR_CAMERA_INIT, false);
+        blink_error<ERR_CAMERA>(ERR_CAMERA_INIT, true);
         if (!SPIFFS.remove(SPIFFS_SETTINGS_PATH)) {
             blink_error<ERR_SETTINGS>(ERR_SETTINGS_REMOVE, true);
         }
