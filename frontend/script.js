@@ -616,7 +616,8 @@ class UI {
             });
         } else {
             folder.addBinding(setting, /** @type {never} */(subkey), {
-                label: subkey.charAt(0).toUpperCase() + subkey.slice(1)
+                label: subkey.charAt(0).toUpperCase() + subkey.slice(1),
+                step: 1
             }).on('change', () => {
                 if (vars.settings)
                     sendSettings(consts.endpoints.settings, vars.settings?.device);
@@ -631,7 +632,8 @@ class UI {
      */
     addSensorTextBinding(folder, setting, key) {
         folder.addBinding(setting, key, {
-            label: key.charAt(0).toUpperCase() + key.slice(1)
+            label: key.charAt(0).toUpperCase() + key.slice(1),
+            step: 1
         }).on('change', () => {
             if (vars.settings)
                 sendSettings(consts.endpoints.sensor, vars.settings?.sensor);
@@ -647,6 +649,7 @@ class UI {
     addSensorRangeBinding(folder, setting, key, range) {
         folder.addBinding(setting, key, {
             label: key.charAt(0).toUpperCase() + key.slice(1),
+            step: 1,
             min: range.min,
             max: range.max
         }).on('change', () => {
