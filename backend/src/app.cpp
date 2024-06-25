@@ -594,6 +594,15 @@ inline String generate_settings_json(sensor_t *s, bool types = false) {
         }
     }
     {
+        // Cleanup Camera options
+        {
+            // Remove fb_count
+            doc["camera"].remove("fb_count");
+            // Remove fb_location
+            doc["camera"].remove("fb_location");
+            // Remove grab_mode
+            doc["camera"].remove("grab_mode");
+        }
         // Remove OTA settings
         doc.remove("ota");
     }
