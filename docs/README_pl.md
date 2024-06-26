@@ -1,6 +1,6 @@
 # **ESP32-CAM-ML**
 
-> [Po Polsku](README_pl.md) | [English](README.md)
+> [English](README.md) | [Po Polsku](README_pl.md)
 
 Projekt ESP32-CAM-ML to wszechstronna platforma rozwojowa wykorzystująca moduł kamery ESP32S3-Sense do przechwytywania obrazów i realizacji funkcji detekcji obiektów. Urządzenie oferuje możliwość pracy w różnych trybach sieciowych, w tym AP (Access Point) i STA (Station), zapewniając elastyczność w konfiguracji sieciowej. Za pomocą prostego interfejsu użytkownika można skonfigurować parametry sieciowe, aktualizacje OTA oraz parametry obrazowania i sensora.
 
