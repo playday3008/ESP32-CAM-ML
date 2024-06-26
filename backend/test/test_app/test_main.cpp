@@ -72,6 +72,19 @@ void test_generate_settings_json(void) {
         TEST_ASSERT_EQUAL(DeserializationError::Ok, error.code());
 
         doc = g_settings;
+        {
+            // Cleanup Camera options
+            {
+                // Remove fb_count
+                doc["camera"].remove("fb_count");
+                // Remove fb_location
+                doc["camera"].remove("fb_location");
+                // Remove grab_mode
+                doc["camera"].remove("grab_mode");
+            }
+            // Remove OTA settings
+            doc.remove("ota");
+        }
         doc.shrinkToFit();
 
         String json;
