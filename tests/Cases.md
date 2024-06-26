@@ -161,7 +161,7 @@ Program behaved as expected.
 
 ## Changing Pixel_format type
 
-<span style="color:red">**Failed**</span>
+<span style="color:red">**Failed**</span> (<span style="color:orange">**Explained**</span>)
 
 <span style="font-size:1.25em;">**Brief description**</span>
 
@@ -186,6 +186,12 @@ Types change properly but every type other then the default JPEG either crashes 
 - Browser: Vivaldi
 - OS: Windows 11
 - Device type: PC
+  
+<!-- Optional fields -->
+
+<span style="font-size:1.25em;">**Dev Response**</span>
+
+Depends on the camera sensor and the driver. The camera sensor may not support the pixel format type that is selected.
 
 ## Testing the Frame_size setting
 
